@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卫津路校区3D地图</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="css/Weijinlu_Campus.css">
+</head>
+<body>
+
+    <div class="map-container" id="mapContainer">
+        <img src="./raw_picture/map.png" class="map-bg" alt="Campus Map">
+
+        <img src="./processed_picture/Building_9.png" 
+             class="building-btn" 
+             alt="Building_9" 
+             data-px-width="779" 
+             style="left:56.7%; top:56.6%; width:7.795658%; --hover-scale:1.75; --hover-translate:-10px;" 
+             onclick="triggerMoveUp('Building_9')">
+
+        <img src="./processed_picture/Building_Architecture.png" 
+             class="building-btn" 
+             alt="Building_Architecture" 
+             data-px-width="554" 
+             style="left:23.9%; top:72.0%; width:5.54%; --hover-scale:1.75; --hover-translate:-10px;" 
+             onclick="triggerMoveUp('Building_Architecture')">
+
+        <img src="./processed_picture/Building_Fengjicai.png" 
+             class="building-btn" 
+             alt="Building_Fengjicai" 
+             data-px-width="522" 
+             style="left:56.2%; top:33.1%; width:5.22%; --hover-scale:2; --hover-translate:-10px;" 
+             onclick="triggerMoveUp('Building_Fengjicai')">
+
+        <img src="./processed_picture/Building_Tiannan.png" 
+             class="building-btn" 
+             alt="Building_Tiannan" 
+             data-px-width="1603" 
+             style="left:61.5%; top:85.4%; width:1300px; --hover-scale:1.25; --hover-translate:-10px;" 
+             onclick="triggerMoveUp('Building_Tiannan')">
+
+        <img src="./processed_picture/Memorial_pavilion.png" 
+             class="building-btn" 
+             alt="Memorial_pavilion" 
+             data-px-width="113" 
+             style="left:68.4%; top:69.89%; width:920px; --hover-scale:1.25; --hover-translate:-10px;" 
+             onclick="triggerMoveUp('Memorial_pavilion')">    
+
+        <img src="./processed_picture/Gate.png" 
+             class="building-btn" 
+             alt="Gate" 
+             data-px-width="113" 
+             style="left:91.2%; top:65.8%; width:920px; --hover-scale:1.25; --hover-translate:-10px;" 
+             onclick="triggerMoveUp('Gate')">   
+    </div>
+
+    <div id="overlay" class="overlay">
+        <button class="back-btn" onclick="resetView()" aria-label="返回全景">
+            <img src="./raw_picture/Memorial_Pavillion_Button.png" alt="" class="back-icon">
+            <span class="visually-hidden">返回全景</span>
+        </button>
+    </div>
+
+    <!-- 左下角轮播图容器 -->
+    <div id="libraryCarousel" class="detail-carousel">
+        <img src="./raw_picture/Library.png" class="carousel-img active" alt="Library Detail 1">
+        <img src="./raw_picture/Library1.png" class="carousel-img" alt="Library Detail 2">
+        <img src="./raw_picture/Library3.png" class="carousel-img" alt="Library Detail 4">
+    </div>
+
+    <img id="Building_9Detail" src="./raw_picture/Building_9.png" class="detail-single-img" alt="Building 9 Detail">
+    <img id="Building_ArchitectureDetail" src="./raw_picture/Building_Architecture.png" class="detail-single-img" alt="Building Architecture Detail">
+    <img id="Building_FengjicaiDetail" src="./raw_picture/Building_Fengjicai.png" class="detail-single-img" alt="Building Fengjicai Detail">
+    <img id="Building_TiannanDetail" src="./raw_picture/Building_Tiannan.png" class="detail-single-img" alt="Building Tiannan Detail">
+    <img id="Memorial_pavilionDetail" src="./raw_picture/Memorial_Pavilion.png" class="detail-single-img" alt="Memorial Pavilion Detail">
+    <img id="GateDetail" src="./raw_picture/Gate.png" class="detail-single-img" alt="Gate Detail">
+<!-- =============================================================================================================================================-->
+    <!--下述部分为新内容-->
+
+    <!-- finish -->
+    <div id="Building9InfoCard" class="library-info-card">
+        <h2>第九教学楼</h2>
+        <div class="info-section">
+            <span class="info-title">设计理念</span>
+            <p class="info-text">
+                结合了实用性和美观性，融合了苏联式建筑风格与中国传统建筑元素，是天津大学的标志性建筑之一
+            </p>
+            <button class="view-layout-btn" onclick="show9Design('./raw_picture/building9Head.png')">详细信息</button>
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">建筑历史</span>
+            <p class="info-text">
+                与天津大学卫津路校区一同建成，经历了多次修缮和扩建，见证了天津大学的发展历程
+            </p>
+            <button class="view-layout-btn" onclick="show9Time()">详细信息</button>
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">功能布局</span>
+            <p class="info-text">
+                兼具教学、实验和办公功能，设有多个专业实验室和教室，满足不同学科的需求
+            </p>
+            <button class="view-layout-btn" onclick="show9Function()">详细信息</button>
+        </div>
+    </div>
+
+    <!-- finish -->
+    <div id="BuildingArchitectureInfoCard" class="library-info-card">
+        <h2>建筑学院</h2>
+        <div class="info-section">
+            <span class="info-title">历史沿革</span>
+            <p class="info-text">
+                与天津大学卫津路校区一同建成，经历了多次修缮和扩建，见证了天津大学的发展历程
+            </p>
+            <button class="view-layout-btn" onclick="showArchitectureTime()">详细信息</button>
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">内部布局</span>
+            <p class="info-text">
+                综合布置了多种功能空间，包括教室、实验室、设计工作室、展览厅和公共区域等
+            </p>
+            <button class="view-layout-btn" onclick="showArchitectureLayout()">详细信息</button>
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">建筑功能</span>
+            <p class="info-text">
+                承担建筑学、城乡规划、风景园林等学科领域的教学、科研、对外交流等任务
+            </p>
+            <button class="view-layout-btn" onclick="showArchitectureFunction()">详细信息</button>
+        </div>
+    </div>
+
+    <div id="BuildingFengjicaiInfoCard" class="library-info-card">
+        <h2>冯骥才研究院</h2>
+        <div class="info-section">
+            <span class="info-title">建筑设计</span>
+            <p class="info-text">
+                方形合围院楼开出大小各异的窗口，空间层次立体，庭院以立瓦青砖漫地，质朴而清雅，平衡了校园的工科气质与人文底蕴
+            </p>
+            <button class="view-layout-btn" onclick="showFengjicaiDesign()">详细信息</button>
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">功能布局</span>
+            <p class="info-text">
+                研究院包括年画剪纸雕塑厅等展览区域、展示文化遗产保护的大树画馆与大树书屋、举办文化艺术展览的北洋美术馆
+            </p>
+            <button class="view-layout-btn" onclick="showFengjicaiLayout()">详细信息</button>
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">功能定位</span>
+            <p class="info-text">
+                冯骥才研究院致力于文化遗产保护与传承，推动传统文化的创新发展，促进文化交流与合作，是天津地域文化研究的核心阵地
+            </p>
+            <button class="view-layout-btn" onclick="showFengjicaiFunction()">详细信息</button>
+        </div>
+    </div>
+
+    <!-- finish -->
+    <div id="GateInfoCard" class="library-info-card">
+        <h2>天津大学东门</h2>
+        <div class="info-section">
+            <span class="info-title">基本信息</span>
+            <p class="info-text">
+                于1995年天津大学百年校庆前落成，由天津大学校友会捐赠，天大校友、著名建筑师布正伟设计
+            </p>
+            <!-- <button class="view-layout-btn" onclick="showLayout()">详细信息</button> -->
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">建筑内涵</span>
+            <p class="info-text">
+                总体呈金字塔形。正反面相同构造，象征天大人表里如一；塔尖高耸，象征着“巍巍学府北洋高”的厚重历史，两侧层叠阶梯浮雕，象征不断攀登的精神
+            </p>
+            <!-- <button class="view-layout-btn" onclick="showLayout()">详细信息</button> -->
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">文化意义</span>
+            <p class="info-text">
+                东门是学校中轴线的起点，与国旗、北洋亭、求是厅、敬业湖构成横贯东西的空间组合，是天津大学的精神标识之一
+            </p>
+            <!-- <button class="view-layout-btn" onclick="showGateMeaning()">详细信息</button> -->
+        </div>
+    </div>
+    
+    <!-- finish -->
+    <div id="MemorialPavilionInfoCard" class="library-info-card">
+        <h2>北洋纪念亭</h2>
+        <div class="info-section">
+            <span class="info-title">设计理念</span>
+            <p class="info-text">
+                形态方正，风格敦朴，通体由花岗岩砌合而成，上方有双龙戏珠浮雕、“北洋大学堂”和“1895”字样，下方是两侧石柱顶起的拱门
+            </p>
+            <!-- <button class="view-layout-btn" onclick="showLayout()">详细信息</button>>  -->
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">基本信息</span>
+            <p class="info-text">
+                1995年百年校庆前落成，由天津大学校友会捐赠，建筑学院彭一刚教授借鉴北洋大学西沽老校址的建筑进行设计
+            </p>
+            <!-- <button class="view-layout-btn" onclick="showLayout()">详细信息</button> -->
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">文化内涵</span>
+            <p class="info-text">
+                北洋纪念亭四角雕刻了天津大学、北洋大学的重要精神图腾，如校训、校歌、北洋大学史略、钦字第一号证书等
+            </p>
+            <button class="view-layout-btn" onclick="showMemorialPavilionRelief()">详细信息</button>
+        </div>
+    </div>
+
+    <!-- finish && photo unfinish-->
+    <div id="BuildingTiannanInfoCard" class="library-info-card">
+        <h2>天南楼</h2>
+        <div class="info-section">
+            <span class="info-title">名称来源</span>
+            <p class="info-text">
+                天南楼正式名称为“南开大学天津大学联合研究大厦”，由天津大学和南开大学共用，横跨天津大学与南开大学校园，故简称“天南楼”或“南天门”
+            </p>
+            <button class="view-layout-btn" onclick="showTiannanChemistry('./raw_picture/Tiannan_sign.png')">详细信息</button>
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">功能定位</span>
+            <p class="info-text">
+                天南楼入驻了天津化学化工协同创新中心、南开大学药学院、先进能源材料化学教育部重点实验室等多个科研机构和实验室
+            </p>
+            <button class="view-layout-btn" onclick="showTiannanCooperate()">详细信息</button>
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">重要意义</span>
+            <p class="info-text">
+                天南楼是天南大“各自独立办学、相互紧密合作”办学方针的具体体现，旨在依托两校在化学和化工领域的学科优势，共同建设高水平化学化工研究中心
+            </p>
+            <button class="view-layout-btn" onclick="showTiannanFunction()">详细信息</button>
+        </div>
+    </div>
+
+<!-- =============================================================================================================================================-->
+    <!-- 布局图片展示容器 -->
+    <div id="layoutViewContainer" class="layout-view-container">
+        <img id="layoutImg" src="" alt="Layout Image" class="layout-img">
+        <div id="d3-chart-container" style="display:none; width: 600px; height: 400px; background: rgba(255,255,255,0.9); border-radius: 10px; margin-right: 20px;"></div>
+        <div class="layout-text" id="layoutText">
+            <!-- 动态填充文本内容 -->
+        </div>
+        <button class="close-layout-btn" onclick="hideLayout()">返回</button>
+    </div>
+
+    <div id="motoContainer" class="moto-container">
+        <img src="./raw_picture/school_moto.png" class="moto-img" alt="School Moto">
+        <div class="moto-overlay"></div>
+    </div>
+
+    <script type="module" src="js/Weijinlu_Campus.js"></script>
+</body>
+</html>

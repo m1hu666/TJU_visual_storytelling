@@ -1,0 +1,265 @@
+:root {
+            --bg-color: #0b0f19;
+            --card-bg: #151a25;
+            --text-primary: #ffffff;
+            --text-secondary: #8c9bb3;
+            --highlight: #00539B; /* 天大蓝 */
+            --accent: #00d2ff;
+            --border-radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 滚动条通用样式 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e2430; }
+        ::-webkit-scrollbar-thumb { background: #3a4a5e; border-radius: 3px; }
+
+        header {
+            height: 60px;
+            background: linear-gradient(90deg, #003666 0%, #0b0f19 100%);
+            display: flex;
+            align-items: center;
+            padding: 0 30px;
+            border-bottom: 1px solid #2c3e50;
+            flex-shrink: 0;
+        }
+
+        header h1 { font-size: 24px; font-weight: 600; letter-spacing: 1px; }
+        header .subtitle {
+            margin-left: 20px; font-size: 14px; color: var(--text-secondary);
+            background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 4px;
+        }
+        header .tip {
+            margin-left: auto; font-size: 12px; color: var(--accent);
+            border: 1px solid var(--accent); padding: 2px 8px; border-radius: 10px;
+        }
+
+        .container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 2.5fr 1fr; /* 左侧图表区 : 右侧列表区 */
+            grid-template-rows: 100%;
+            gap: 20px;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .charts-area {
+            display: grid;
+            grid-template-rows: 0.5fr 1.5fr; /* 上方矩形树图 : 下方混合区 */
+            gap: 20px;
+            min-height: 0;
+        }
+
+        /* 底部行：包含合并后的图表容器 + 新的详情容器 */
+        .charts-bottom-row {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr; /* 左图表宽一些，详情页窄一些 */
+            gap: 20px;
+            min-height: 0;
+        }
+
+        .chart-box {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 头部栏：包含标题和切换开关 */
+        .box-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+
+        .chart-title {
+            font-size: 16px; color: var(--accent);
+            padding-left: 10px; border-left: 3px solid var(--highlight);
+        }
+
+        /* 切换开关样式 */
+        .view-switcher {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            padding: 2px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .view-btn {
+            font-size: 12px;
+            padding: 4px 12px;
+            cursor: pointer;
+            border-radius: 3px;
+            color: var(--text-secondary);
+            transition: all 0.3s;
+        }
+        .view-btn.active {
+            background: var(--highlight);
+            color: #fff;
+        }
+
+        .chart-content { 
+            flex: 1; 
+            width: 100%; 
+            height: 100%; 
+            min-height: 0; 
+            /* 默认显示，JS控制隐藏 */
+        }
+
+        /* 隐藏元素的类 */
+        .d-none { display: none !important; }
+
+        /* --- 详情页样式 (新模块) --- */
+        .detail-content-area {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .detail-placeholder {
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        .detail-placeholder svg {
+            fill: var(--text-secondary);
+            width: 48px;
+            height: 48px;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+        .detail-placeholder p {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .detail-card {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .detail-header {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .detail-college {
+            font-size: 12px;
+            margin-bottom: 5px;
+            opacity: 0.9;
+            font-weight: bold;
+        }
+
+        .detail-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.4;
+        }
+
+        .detail-body {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .detail-section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            color: var(--accent);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 4px;
+        }
+
+        .section-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #cbd5e1;
+            text-align: justify;
+        }
+
+        /* --- 右侧列表样式 --- */
+        .info-panel {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255,255,255,0.05);
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .info-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.2);
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reset-btn {
+            font-size: 12px; cursor: pointer; color: var(--accent);
+            border: 1px solid var(--accent); padding: 2px 8px; border-radius: 4px;
+            transition: all 0.2s; display: none;
+        }
+        .reset-btn:hover { background: var(--accent); color: #000; }
+
+        .info-list { flex: 1; overflow-y: auto; padding: 15px; scroll-behavior: smooth; }
+
+        .card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px; padding: 15px; margin-bottom: 15px;
+            transition: all 0.3s ease; border-left: 4px solid transparent; cursor: pointer;
+        }
+        .card:hover { background: rgba(255,255,255,0.06); transform: translateX(5px); border-left-color: var(--accent); }
+        .card.active { background: rgba(0, 210, 255, 0.1); border-left-color: var(--accent); box-shadow: 0 0 15px rgba(0, 210, 255, 0.2); }
+        .card.hidden { display: none; }
+        .card-college { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; display: inline-block; background: rgba(0, 83, 155, 0.3); padding: 2px 6px; border-radius: 4px; }
+        .card-title { font-size: 15px; font-weight: bold; color: #fff; margin-bottom: 8px; }
+        .card-desc { font-size: 13px; color: #aab5c4; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        @media (max-width: 1200px) {
+            .container { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow-y: auto; }
+            .charts-area { height: 900px; }
+            .charts-bottom-row { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+        }

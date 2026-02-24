@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>北洋-天大：人物信息卡片集</title>
+    <!-- External Libs -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/history_wheel.css">
+</head>
+<body>
+
+    <!-- 入场遮罩 -->
+    <div id="warp-overlay"></div>
+    <script>
+        // 触发入场动画并在加载后淡出遮罩
+        document.body.classList.add('warp-enter');
+        window.addEventListener('load', () => {
+            const overlay = document.getElementById('warp-overlay');
+            if (!overlay) return;
+            setTimeout(() => {
+                overlay.style.transition = 'opacity 0.6s ease-out';
+                overlay.style.opacity = '0';
+                overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+                document.body.classList.remove('warp-enter');
+            }, 900);
+        });
+    </script>
+
+    <canvas id="dust-canvas"></canvas>
+
+    <div class="tech-back-btn" onclick="window.location.href='../time.html'" title="RETURN TO SYSTEM">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </div>
+
+    <div class="sidebar">
+        <!-- resetToStart is exposed on window by the module -->
+        <button class="reset-btn" onclick="resetToStart()">⟲ RESET TO 1895</button>
+        <div class="vignette"></div>
+        <div class="wheel-stage" id="carousel"></div>
+    </div>
+
+    <div class="main-stage">
+        <div class="map-section">
+            <svg id="map-svg" width="100%" height="100%" viewBox="0 0 800 300" preserveAspectRatio="xMidYMid slice"></svg>
+        </div>
+
+        <div class="info-section">
+            
+            <div class="portrait-wrapper" id="portrait-wrapper">
+                <div class="portrait-card" id="portrait-card">
+                    <img src="" class="portrait-img" id="hero-img" alt="Hero Portrait">
+                    <div class="portrait-decor"></div>
+                    <div class="native-badge" id="disp-native">NATIVE</div>
+                </div>
+            </div>
+
+            <div class="content-wrapper">
+                <div class="hero-header">
+                    <h1 class="hero-name" id="disp-name">LOADING</h1>
+                    <span class="hero-role" id="disp-role">...</span>
+                </div>
+                
+                <div class="bio-text">
+                    <span id="typewriter-text"></span><span class="cursor"></span>
+                </div>
+
+                <div class="events-grid" id="disp-events"></div>
+            </div>
+
+            <div class="network-container">
+                <div class="network-title">SOCIAL GRAPH / 关联图谱</div>
+                <svg id="network-svg"></svg>
+            </div>
+
+            <div class="timeline-bar">
+                <div class="time-track" id="time-track">
+                    <div class="time-progress" id="time-bar"></div>
+                    <div class="time-year" id="time-label">1895</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application Logic -->
+    <script type="module" src="js/history_wheel.js"></script>
+</body>
+</html>

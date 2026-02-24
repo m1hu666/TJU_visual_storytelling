@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>北洋园校区3D地图</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="css/Beiyangyuan_Campus_completed.css">
+</head>
+<body>
+
+    <div class="map-container" id="mapContainer">
+        <img src="./raw_picture/map.png" class="map-bg" alt="Campus Map">
+
+        <img src="./processed_picture/library_processed_small.png" 
+             class="building-btn" 
+             alt="Library" 
+             data-px-width="590" 
+             style="left:51.7%; top:49.6%; width:400px; --hover-scale:1.75; --hover-translate:-10px;" 
+             onclick="triggerMoveUp('library')">
+
+        <img src="./processed_picture/stadium_processed_small.png" 
+             class="building-btn" 
+             alt="Stadium" 
+             data-px-width="300" 
+             style="left:74.2%; top:33.9%; width:300px; --hover-scale:1.75; --hover-translate:-10px;" 
+             onclick="triggerMoveUp('stadium')">
+
+        <img src="./processed_picture/Student_Center_processed_small.png" 
+             class="building-btn" 
+             alt="Student Center" 
+             data-px-width="430" 
+             style="left:43.2%; top:48.4%; width:430px; --hover-scale:2; --hover-translate:-10px;" 
+             onclick="triggerMoveUp('student_center')">
+
+        <img src="./processed_picture/Earthquake_Simulation_processed_small.png" 
+             class="building-btn" 
+             alt="Earthquake Simulation" 
+             data-px-width="1500" 
+             style="left:21.6%; top:46.4%; width:1300px; --hover-scale:1.25; --hover-translate:-10px;" 
+             onclick="triggerMoveUp('earthquake')">
+
+        <img src="./processed_picture/Building_32_processed_small.png" 
+             class="building-btn" 
+             alt="Building 32" 
+             data-px-width="920" 
+             style="left:76.9%; top:52.8%; width:920px; --hover-scale:1.25; --hover-translate:-10px;" 
+             onclick="triggerMoveUp('building32')">    
+
+    <div id="overlay" class="overlay">
+        <button class="back-btn" onclick="resetView()" aria-label="返回全景">
+            <img src="./raw_picture/Memorial_Pavillion_Button.png" alt="" class="back-icon">
+            <span class="visually-hidden">返回全景</span>
+        </button>
+    </div>
+
+    <!-- 左下角轮播图容器 -->
+    <div id="libraryCarousel" class="detail-carousel">
+        <img src="./raw_picture/Library.png" class="carousel-img active" alt="Library Detail 1">
+        <img src="./raw_picture/Library1.png" class="carousel-img" alt="Library Detail 2">
+        <img src="./raw_picture/Library3.png" class="carousel-img" alt="Library Detail 4">
+    </div>
+
+    <!-- Building 32 单张详情图 -->
+    <img id="building32Detail" src="./raw_picture/Building_32.png" class="detail-single-img" alt="Building 32 Detail">
+
+    <!-- Stadium 单张详情图 -->
+    <img id="stadiumDetail" src="./raw_picture/stadium.png" class="detail-single-img" alt="Stadium Detail">
+
+    <!-- Earthquake Simulation 单张详情图 -->
+    <img id="earthquakeDetail" src="./raw_picture/Earthquake_Simulation_trees.png" class="detail-single-img" alt="Earthquake Simulation Detail">
+
+    <!-- Student Center 单张详情图 -->
+    <img id="studentCenterDetail" src="./raw_picture/Student_Center.png" class="detail-single-img" alt="Student Center Detail">
+
+    <div id="libraryInfoCard" class="library-info-card">
+        
+        <h2>郑东图书馆</h2>
+        <div class="info-section">
+            <span class="info-title">资源布局</span>
+            <p class="info-text">
+                馆藏布局清晰：二层工学深耕，三层文理兼修，四层博采众长
+            </p>
+            <button class="view-layout-btn" onclick="showLayout('./raw_picture/Library_layout.png')">详细信息</button>
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">硬件设施</span>
+            <p class="info-text">
+                图书馆配备了研究厢、影视欣赏室、音乐欣赏室等多种功能空间，满足不同学习需求
+            </p>
+            <button class="view-layout-btn" onclick="showLayout('./raw_picture/Library_layout1.png')">详细信息</button>
+        </div>
+
+        <div class="info-section">
+            <span class="info-title">新技术体验区</span>
+            <p class="info-text">
+                新技术体验区包含数字阅读区、科技互动区、创意交流区几个部分
+            </p>
+            <button class="view-layout-btn" onclick="showLayout('./raw_picture/Library_tech.png')">详细信息</button>
+        </div>
+
+    </div>
+
+    <!-- Building 32 Info Card -->
+    <div id="building32InfoCard" class="library-info-card">
+        <h2>第32教学楼</h2>
+        <div class="info-section">
+            <span class="info-title">建筑概述</span>
+            <p class="info-text">
+                第32教学楼位于北洋园校区东侧，主要为理学院教学组团的办公场所，别称“斗兽场”。
+            </p>
+            <button class="view-layout-btn" onclick="show32BuildingInformation()">详细历史信息</button>
+        </div>
+        <div class="info-section">
+            <span class="info-title">设计理念</span>
+            <p class="info-text">
+                整组建筑以圆形的宣怀广场为中心，建筑沿广场周围布置，中间包含北洋纪念亭。
+            </p>
+            <button class="view-layout-btn" onclick="showLayout('./raw_picture/Building_32_outside.png')">详细信息</button>
+        </div>
+        <div class="info-section">
+            <span class="info-title">北洋纪念亭</span>
+            <p class="info-text">
+                北洋纪念亭并不位于广场圆心位置，而是向北退让，呼应轴线变化。<br>
+                其5面墙依次雕刻天津大学校歌、校训、北洋赋、北洋大学简史等内容。
+            </p>
+            <button class="view-layout-btn" onclick="showLayout('./raw_picture/Memorial_Pavilion.png')">详细信息</button>
+        </div>
+    </div>
+
+    <!-- Stadium Info Card -->
+    <div id="stadiumInfoCard" class="library-info-card">
+        <h2>体育馆</h2>
+        <div class="info-section">
+            <span class="info-title">体育馆概述</span>
+            <p class="info-text">
+                北区体育场馆由体育馆、游泳馆、北区体育场三部分组成，<br>
+                是集球类、田径、游泳、健身在内的综合体。
+            </p>
+            <button class="view-layout-btn" onclick="showStadiumInformation()">详细信息</button>
+        </div>
+        <div class="info-section">
+            <span class="info-title">综合体育馆</span>
+            <p class="info-text">
+                包含报告厅、体育教室、体操馆、武术馆、篮球馆、羽毛球场、排球场等设施。
+            </p>
+            <button class="view-layout-btn" onclick="showLayout('./raw_picture/stadium_volleyball.png')">详细信息</button>
+        </div>
+        <div class="info-section">
+            <span class="info-title">游泳馆</span>
+            <p class="info-text">
+                游泳馆首层主要为更衣室和带有循环过滤系统的十道50米标准泳池。
+            </p>
+            <button class="view-layout-btn" onclick="showLayout('./raw_picture/stadium_swimmingpool.png')">详细信息</button>
+        </div>
+    </div>
+
+    <!-- Earthquake Simulation Info Card -->
+    <div id="earthquakeInfoCard" class="library-info-card">
+        <h2>国家大型地震工程模拟研究设施</h2>
+        <div class="info-section">
+            <span class="info-title">建筑概述</span>
+            <p class="info-text">
+                国家大型地震工程模拟研究设施，简称“地震大装置”，<br>
+                总建筑面积7.6万平方公里，总投资超过15亿人民币。
+            </p>
+            <button class="view-layout-btn" onclick="showEarthquakeHistory()">详细信息</button>
+        </div>
+        <div class="info-section">
+            <span class="info-title">内部设施</span>
+            <p class="info-text">
+                “地震大装置”主要分为实验中心和仿真中心，由地震工程模拟试验装置、<br>
+                高性能计算与智能仿真系统、试验配套与共享服务三大系统组成。
+            </p>
+            <button class="view-layout-btn" onclick="showLayout('./raw_picture/Earthquake_Simulation_inside.png')">详细信息</button>
+        </div>
+        <div class="info-section">
+            <span class="info-title">建设意义</span>
+            <p class="info-text">
+                “地震大装置”是我国地震工程领域首个国家重大科技基础设施，<br>
+                是关系国家安全的“国之利器、创新利器”。
+            </p>
+            <button class="view-layout-btn" onclick="showEarthquakeSignificance()">详细信息</button>
+        </div>
+    </div>
+
+    <!-- Student Center Info Card -->
+    <div id="studentCenterInfoCard" class="library-info-card">
+        <h2>大通学生活动中心</h2>
+        <div class="info-section">
+            <span class="info-title">设计理念</span>
+            <p class="info-text">
+                大通学生活动中心坐落于北洋园校区主轴线尽端，<br
+                突出水面的半岛将其引向开阔的自然景观。
+            </p>
+            <button class="view-layout-btn" onclick="showStudentCenterDesign()">详细信息</button>
+        </div>
+        <div class="info-section">
+            <span class="info-title">内部设施</span>
+            <p class="info-text">
+                大通学生报告厅由A、B、C三区构成，能容纳450余人，<br>
+                包含求实影院、琴房、舞蹈房等设施。
+            </p>
+            <button class="view-layout-btn" onclick="showLayout('./raw_picture/Student_Center_theatre.png')">详细信息</button>
+        </div>
+        <div class="info-section">
+            <span class="info-title">场地使用原则</span>
+            <p class="info-text">
+                大通学生活动中心场地使用需遵循“校级优先，兼顾部分”、“校内优先，兼顾校外”的原则。
+            </p>
+            <button class="view-layout-btn" onclick="showStudentCenterUsage()">详细信息</button>
+        </div>
+    </div>
+
+    <!-- 布局图片展示容器 -->
+    <div id="layoutViewContainer" class="layout-view-container">
+        <img id="layoutImg" src="" alt="Layout Image" class="layout-img">
+        <div id="d3-chart-container" style="display:none; width: 600px; height: 400px; background: rgba(255,255,255,0.9); border-radius: 10px; margin-right: 20px;"></div>
+        <div class="layout-text" id="layoutText">
+            <!-- 动态填充文本内容 -->
+        </div>
+        <button class="close-layout-btn" onclick="hideLayout()">返回</button>
+    </div>
+
+    <div id="motoContainer" class="moto-container">
+        <img src="./raw_picture/school_moto.png" class="moto-img" alt="School Moto">
+        <div class="moto-overlay"></div>
+    </div>
+    </div> <!-- End of map-container -->
+
+    <script type="module" src="js/Beiyangyuan_Campus_completed.js"></script>
+</body>
+</html>

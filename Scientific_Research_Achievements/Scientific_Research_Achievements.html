@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天津大学科研成果可视化大屏</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="css/Scientific_Research_Achievements.css">
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>TIANJIN UNIVERSITY</h1>
+        <span class="subtitle">科研成果全景可视化平台</span>
+    </div>
+</header>
+
+<div class="container">
+    <div class="charts-area">
+        <div class="chart-box">
+            <div class="chart-title">成果规模与权重 (点击定位)</div>
+            <div id="treemapChart" class="chart-content"></div>
+        </div>
+
+        <div class="charts-bottom-row">
+            
+            <div class="chart-box">
+                <div class="box-header">
+                    <div class="chart-title">科研图谱视图</div>
+                    <div class="view-switcher">
+                        <div id="btn-sunburst" class="view-btn active" onclick="switchView('sunburst')">学科分布</div>
+                        <div id="btn-graph" class="view-btn" onclick="switchView('graph')">协作网络</div>
+                    </div>
+                </div>
+                <div id="sunburstChart" class="chart-content"></div>
+                <div id="graphChart" class="chart-content d-none"></div>
+            </div>
+
+            <div class="chart-box">
+                <div class="chart-title">科研成果深度解析</div>
+                <div id="detail-panel" class="detail-content-area">
+                    <div class="detail-placeholder">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                        </svg>
+                        <p>请在图表或列表中点击具体的科研项目<br>以查看详细解析</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="info-panel">
+        <div class="info-header">
+            <div>
+                <h3>成果详情列表</h3>
+                <div style="font-size: 12px; color: #888; margin-top: 5px;">
+                    当前显示 <span id="current-count" style="color:var(--accent)">0</span> / <span id="total-count">0</span> 项
+                </div>
+            </div>
+            <div id="resetBtn" class="reset-btn" onclick="resetAll()">重置筛选 ↺</div>
+        </div>
+        <div class="info-list" id="cardList"></div>
+    </div>
+</div>
+
+<script type="module" src="js/Scientific_Research_Achievements.js"></script>
+</body>
+</html>

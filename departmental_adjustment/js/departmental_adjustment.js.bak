@@ -1,0 +1,918 @@
+
+import { COLORS, GEO_COORD_MAP, DEPT_ICONS, DEPTS } from './data/dept_config.js';
+import { RAW_DATA } from './data/dept_data.js';
+
+export function initChart() {
+    // Aliases to match original code style where convenient
+    const colors = COLORS;
+    const geoCoordMap = GEO_COORD_MAP;
+    const rawData = RAW_DATA;
+
+    let currentFilterYear = null;
+    const sankeyChart = echarts.init(document.getElementById('sankey-chart'));
+    const mapChart = echarts.init(document.getElementById('map-chart'));
+    const forceChart = echarts.init(document.getElementById('force-chart'));
+    const timelineChart = echarts.init(document.getElementById('timeline-chart'));
+
+    // 保存桑基图节点位置
+    const SANKY_POS_KEY = 'tju_sankey_positions_v1';
+    let sankeyNodePositions = {};
+    try { sankeyNodePositions = JSON.parse(localStorage.getItem(SANKY_POS_KEY)) || {}; } catch(e) { sankeyNodePositions = {}; }
+
+    function matchYear(itemYear, filterYear) {
+        if (!filterYear || filterYear === 'NOW') return true;
+        if (filterYear === 'VIEW_PRE' || filterYear === 'VIEW_REBUILD') return false;
+        let iYear = parseInt(itemYear);
+        let fYear = parseInt(filterYear);
+        if (!isNaN(iYear) && !isNaN(fYear)) {
+            return iYear <= fYear;
+        }
+        return false;
+    }
+
+    function getSankeyData(yearFilter) {
+        if (yearFilter === 'VIEW_PRE' || yearFilter === 'VIEW_REBUILD') return { nodes: [], links: [] };
+        
+        const nodes = [], links = [], addedNodes = new Set();
+        const centerNode = "天津大学";
+        let hasData = false;
+
+        const processLink = (source, target, val, item, type) => {
+            if (!matchYear(item.year, yearFilter)) return;
+            hasData = true;
+            if (!addedNodes.has(source)) { 
+                const sourceColor = (source === centerNode) ? colors.tju : colors.source;
+                const nodeDef = { name: source, label: { formatter: item.source || item.target }, itemStyle: { color: sourceColor } };
+                if (sankeyNodePositions[source]) { nodeDef.x = sankeyNodePositions[source].x; nodeDef.y = sankeyNodePositions[source].y; }
+                nodes.push(nodeDef);
+                addedNodes.add(source); 
+            }
+            if (!addedNodes.has(target)) { 
+                const targetColor = (target === centerNode) ? colors.tju : colors.target;
+                const targetLabel = (target === centerNode) ? { color: '#fff', fontWeight: '600' } : { color: colors.target };
+                const nodeDef = { name: target, itemStyle: { color: targetColor }, label: targetLabel };
+                if (sankeyNodePositions[target]) { nodeDef.x = sankeyNodePositions[target].x; nodeDef.y = sankeyNodePositions[target].y; }
+                nodes.push(nodeDef);
+                addedNodes.add(target); 
+            }
+            links.push({ 
+                source: source, target: target, value: val, 
+                edgeData: { 
+                    type: type,
+                    rawSource: item.source || "天津大学",
+                    rawTarget: item.target || item.evolution || "天津大学",
+                    dept: item.dept || item.label,
+                    desc: item.desc,
+                    intro: (typeof item.intro !== 'undefined') ? item.intro : '',
+                    year: item.year,
+                    image: item.image
+                } 
+            });
+        };
+
+        rawData.inflows.forEach(i => processLink(i.source + "_src", centerNode, 5, i, 'INFLOW'));
+        rawData.outflows.forEach(i => processLink(centerNode, i.target, 3, i, 'OUTFLOW'));
+        rawData.branches.forEach(i => processLink(centerNode, i.target, 4, i, 'BRANCH'));
+
+        if (hasData || !yearFilter) {
+            if(!addedNodes.has(centerNode)) {
+                nodes.push({ name: centerNode, itemStyle: { color: colors.tju, borderColor: '#fff', borderWidth: 1 } });
+            }
+        }
+        return { nodes, links };
+    }
+
+    let originalForceNodes = [], originalForceLinks = [];
+    let forceCategories = [
+        {name: '主体', itemStyle: {color: colors.tju}}, 
+        {name: '来源', itemStyle: {color: colors.source}}, 
+        {name: '去向', itemStyle: {color: colors.target}}
+    ];
+    
+    function getForceData(yearFilter) {
+        const nodes = [{ name: "天津大学", symbolSize: 35, category: 0, draggable: true }];
+        const links = [];
+        const exist = new Set(["天津大学"]);
+        function addNode(name, cat) { if (!exist.has(name)) { nodes.push({ name: name, category: cat, symbolSize: 12, draggable: true }); exist.add(name); } }
+        
+        rawData.inflows.forEach(i => { if(matchYear(i.year, yearFilter)) { addNode(i.source, 1); links.push({ source: i.source, target: "天津大学" }); } });
+        rawData.outflows.forEach(i => { if(matchYear(i.year, yearFilter)) { addNode(i.target, 2); links.push({ source: "天津大学", target: i.target }); } });
+        rawData.branches.forEach(i => { if(matchYear(i.year, yearFilter)) { addNode(i.target, 2); links.push({ source: "天津大学", target: i.target }); } });
+        
+        if (!yearFilter) { originalForceNodes = JSON.parse(JSON.stringify(nodes)); originalForceLinks = JSON.parse(JSON.stringify(links)); }
+        return { nodes, links, categories: forceCategories };
+    }
+    
+    let originalMapLines = [], originalMapScatter = [];
+    function getMapLines(yearFilter) {
+        const lines = [], scatter = [], tju = geoCoordMap["天津大学"];
+        const activeLocs = new Set(["天津大学"]);
+        
+        const addLine = (i, from, to, color, fName, tName) => {
+            if(matchYear(i.year, yearFilter) && geoCoordMap[fName] && geoCoordMap[tName]) {
+                lines.push({ fromName: fName, toName: tName, coords: [geoCoordMap[fName], geoCoordMap[tName]], lineStyle: { color: color } });
+                activeLocs.add(fName); activeLocs.add(tName);
+            }
+        }
+
+        rawData.inflows.forEach(i => addLine(i, i.source, "天津大学", colors.source, i.source, "天津大学"));
+        rawData.outflows.forEach(i => addLine(i, "天津大学", i.target, colors.target, "天津大学", i.target));
+        rawData.branches.forEach(i => addLine(i, "天津大学", i.target, colors.target, "天津大学", i.target));
+
+        activeLocs.forEach(name => {
+            if(geoCoordMap[name]) {
+                let nodeColor = colors.source;
+                if (name === "天津大学") nodeColor = colors.tju;
+                else if (rawData.outflows.some(o => o.target === name) || rawData.branches.some(b => b.target === name)) nodeColor = colors.target;
+                
+                scatter.push({ name: name, value: geoCoordMap[name].concat([1]), itemStyle: { color: nodeColor } });
+            }
+        });
+
+        if (!yearFilter) { originalMapLines = JSON.parse(JSON.stringify(lines)); originalMapScatter = JSON.parse(JSON.stringify(scatter)); }
+        return { lines, scatter };
+    }
+
+    // --- Update Charts ---
+    function updateDashboard(year) {
+        currentFilterYear = year;
+        stop1958Animation();
+
+        const mergerView = document.getElementById('merger-view');
+        const rebuildView = document.getElementById('rebuild-view');
+
+        const sankeyDiv = document.getElementById('sankey-chart');
+        const infoTerminal = document.getElementById('info-terminal');
+        const statusDiv = document.getElementById('sys-status');
+        
+        if(rebuildView) rebuildView.style.display = 'none';
+        mergerView.style.display = 'none';
+        sankeyDiv.style.visibility = 'visible';
+        sankeyDiv.style.opacity = '1';
+
+        
+        if (year === 'VIEW_PRE') {
+            sankeyDiv.style.visibility = 'hidden';
+            mergerView.style.display = 'block';
+            
+            const scene = document.getElementById('mv-scene');
+            const deptContainer = document.getElementById('mv-dept-container');
+            
+            scene.classList.remove('active'); scene.classList.remove('init');
+            deptContainer.innerHTML = ''; 
+
+            void scene.offsetWidth; 
+            scene.classList.add('init');
+            setTimeout(() => scene.classList.add('active'), 500);
+
+            const deptIcons = DEPT_ICONS;
+            const depts = DEPTS;
+
+            const radius = 230; 
+            const total = depts.length;
+            
+            depts.forEach((d, i) => {
+                const angle = (i / total) * 2 * Math.PI - Math.PI / 2; 
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                
+                const el = document.createElement('div');
+                el.className = 'mv-dept';
+                el.dataset.fate = d.fate;
+                el.innerHTML = `
+                    <div class="mv-dept-dot">
+                        <svg viewBox="0 0 24 24">${deptIcons[d.icon] || ''}</svg>
+                    </div>
+                    <div class="mv-dept-name">${d.name}</div>
+                    <div class="mv-dept-sub">${d.note}</div>
+                `;
+                
+                el.style.left = `calc(50% + ${x}px)`;
+                el.style.top = `calc(50% + ${y}px)`;
+                el.style.transitionDelay = `${1.2 + i * 0.1}s`; 
+                
+                deptContainer.appendChild(el);
+            });
+
+            infoTerminal.innerHTML = `
+                <h3 style="color:${colors.tju}; border-color:${colors.tju}">历史沿革 · 1951</h3>
+                <div class="term-group">
+                    <div class="term-card">
+                        <span class="term-label">重大事件</span>
+                        <div class="term-value">院校合并与更名</div>
+                    </div>
+                    <div class="term-card">
+                        <span class="term-label">合并方</span>
+                        <div class="term-value">北洋大学 & 河北工学院</div>
+                    </div>
+                    <div class="term-card" style="border-color:${colors.tju}">
+                        <span class="term-label">成立院系</span>
+                        <div class="term-value" style="color:${colors.tju}">下设 11 个系</div>
+                    </div>
+                </div>
+                <div class="term-desc" style="border-left-color:${colors.tju}">
+                “中央人民政府教育部下令，将北洋大学与河北工学院合并，更名为‘天津大学’。”
+                </div>
+                <div class="guide-list">
+                    <div class="guide-item">
+                         <div class="guide-text" style="color:var(--text-sub); font-size:12px;">当前显示: <b style="color:#fff;">1951 年快照</b></div>
+                    </div>
+                </div>
+            `;
+            
+            statusDiv.innerText = `FILTER: 1951`; statusDiv.style.borderColor = colors.tju; statusDiv.style.color = colors.tju;
+            
+            const fData = {
+                nodes: [
+                    { name: '天津大学', category: 0, symbolSize: 45, draggable: true, itemStyle: { color: colors.tju } },
+                    { name: '北洋大学', category: 1, symbolSize: 30, draggable: true },
+                    { name: '河北工学院', category: 1, symbolSize: 30, draggable: true },
+                ],
+                links: [
+                    { source: '北洋大学', target: '天津大学' },
+                    { source: '河北工学院', target: '天津大学' }
+                ],
+                categories: forceCategories
+            };
+            forceChart.setOption({ series: [{ data: fData.nodes, links: fData.links }] });
+
+            const mData = {
+                lines: [
+                    { coords: [geoCoordMap['北洋大学'], geoCoordMap['天津大学']], lineStyle: { color: colors.source } },
+                    { coords: [geoCoordMap['河北工学院'], geoCoordMap['天津大学']], lineStyle: { color: colors.source } }
+                ],
+                scatter: [
+                    { name: '北洋大学', value: geoCoordMap['北洋大学'].concat([1]), itemStyle: { color: colors.source } },
+                    { name: '河北工学院', value: geoCoordMap['河北工学院'].concat([1]), itemStyle: { color: colors.source } },
+                    { name: '天津大学', value: geoCoordMap['天津大学'].concat([1]), itemStyle: { color: colors.tju } }
+                ]
+            };
+            mapChart.setOption({ series: [{ data: mData.lines }, { data: mData.scatter }] });
+
+        } else if (year === 'VIEW_REBUILD') {
+             const sankeyDiv = document.getElementById('sankey-chart');
+             const rebuildView = document.getElementById('rebuild-view');
+             sankeyDiv.style.visibility = 'hidden';
+             rebuildView.style.display = 'flex';
+
+             const scene = rebuildView.querySelector('.rb-scene');
+             scene.classList.remove('active');
+             void scene.offsetWidth;
+             setTimeout(() => {
+                 scene.classList.add('active');
+                 start1958Animation();
+             }, 100);
+
+             infoTerminal.innerHTML = `
+                <h3 style="color:${colors.target}; border-color:${colors.target}">历史沿革 · 1958</h3>
+                <div style="font-size:12px; color:#aaa; margin-bottom:15px; font-style:italic;">背景：河北省会迁往天津，大跃进工业需求激增。</div>
+                <div class="term-group">
+                    <div class="term-card">
+                        <span class="term-label">重大决策</span>
+                        <div class="term-value">重建河北工学院</div>
+                    </div>
+                    <div class="term-card" style="border-color:${colors.target}">
+                        <span class="term-label">核心人物</span>
+                        <div class="term-value" style="color:${colors.tju}">潘承孝 <span style="font-size:12px;opacity:0.7">(原天大副校长)</span></div>
+                    </div>
+                    <div class="term-card">
+                        <span class="term-label">师资输送</span>
+                        <div class="term-value">50名教师 + 50名毕业生</div>
+                    </div>
+                    <div class="term-card">
+                        <span class="term-label">地理变迁</span>
+                        <div class="term-value" style="font-size:14px">天大七里台 <span style="color:${colors.target}">➜</span> 红桥丁字沽</div>
+                    </div>
+                </div>
+                
+                <div class="term-desc" style="border-left-color:${colors.target}">
+                “这次复校并非简单的‘新建’，而是‘搬迁’和‘分离’。天津大学输出了极高规格的师资和管理团队（如化学工程、机电工程），并将丁字沽校区让出，用于重建河北工学院。”
+                </div>
+                <div class="guide-list">
+                    <div class="guide-item">
+                         <div class="guide-text" style="color:var(--text-sub); font-size:12px;">当前显示: <b style="color:#fff;">1958 年快照</b></div>
+                    </div>
+                </div>
+            `;
+            statusDiv.innerText = `FILTER: 1958`; statusDiv.style.borderColor = colors.target; statusDiv.style.color = colors.target;
+
+            const fData = {
+                nodes: [
+                    { name: '天津大学', category: 0, symbolSize: 45, draggable: true, itemStyle: { color: colors.tju } },
+                    { name: '河北工学院', category: 2, symbolSize: 45, draggable: true, itemStyle: { color: colors.target } }
+                ],
+                links: [{ source: '天津大学', target: '河北工学院', lineStyle: { width: 5, curveness: 0, color: colors.target } }],
+                categories: forceCategories
+            };
+            forceChart.setOption({ series: [{ data: fData.nodes, links: fData.links }] });
+
+             const mData = {
+                lines: [
+                    { coords: [geoCoordMap['天津大学'], geoCoordMap['河北工学院']], lineStyle: { color: colors.target, width: 3, curveness: 0.2 } }
+                ],
+                scatter: [
+                    { name: '天津大学', value: geoCoordMap['天津大学'].concat([1]), itemStyle: { color: colors.tju } },
+                    { name: '河北工学院', value: geoCoordMap['河北工学院'].concat([1]), itemStyle: { color: colors.target } }
+                ]
+            };
+            mapChart.setOption({ series: [{ data: mData.lines }, { data: mData.scatter }] });
+
+        } else {
+            const sankeyDiv = document.getElementById('sankey-chart');
+            const mergerView = document.getElementById('merger-view');
+            sankeyDiv.style.visibility = 'visible';
+            mergerView.style.display = 'none';
+
+            const defaultHTML = `<h3>交互指南 <span class="subtitle">INTERACTION GUIDE</span></h3><div class="guide-list"><div class="guide-item"><div class="guide-icon">1</div><div class="guide-text">点击底部 <b>时间轴节点</b><br/>可筛选特定年份数据</div></div><div class="guide-item"><div class="guide-icon">2</div><div class="guide-text">悬停在 <b>流向连线</b> 上<br/>查看详细叙事与图片资料</div></div><div class="guide-item" style="border-style: solid; border-color: rgba(255,186,0,0.2);"><div class="guide-icon" style="background: var(--color-tju); color: black;">i</div><div class="guide-text" style="align-self:center;">当前视图: <span id="current-view-label" style="color:var(--color-tju); font-weight:bold;">${year ? year + (year==='NOW'?'':' 年累计') : '全历史全景'}</span></div></div></div>`;
+
+            if (infoTerminal.innerHTML.includes('1951') || infoTerminal.innerHTML.includes('1958')) {
+                infoTerminal.innerHTML = defaultHTML;
+            } else {
+                const descDiv = document.getElementById('current-view-label');
+                if(descDiv) descDiv.innerText = year ? year + (year==='NOW'?'':' 年累计') : '全历史全景';
+                else infoTerminal.innerHTML = defaultHTML; 
+            }
+
+            if (year) {
+                statusDiv.innerText = `FILTER: ${year}`; statusDiv.style.borderColor = colors.tju; statusDiv.style.color = colors.tju;
+            } else {
+                statusDiv.innerText = `ALL HISTORY`; statusDiv.style.borderColor = colors.source; statusDiv.style.color = colors.text;
+            }
+
+            const sData = getSankeyData(year); 
+            sankeyChart.setOption({ 
+                series: [{ data: sData.nodes, links: sData.links }] 
+            }, { notMerge: false, lazyUpdate: false });
+
+            const fData = getForceData(year); forceChart.setOption({ series: [{ data: fData.nodes, links: fData.links }] });
+            const mData = getMapLines(year); mapChart.setOption({ series: [{ data: mData.lines }, { data: mData.scatter }] });
+        }
+
+        const timelinePoints = [
+            { id: 'VIEW_PRE', label: '院系调整前概况' },
+            { id: 'VIEW_REBUILD', label: '重新支援' },
+            { id: '1952', label: '1952' },
+            { id: '1954', label: '1954' },
+            { id: '1955', label: '1955' },
+            { id: '1956', label: '1956' },
+            { id: '1960', label: '1960' },
+            { id: '1970', label: '1970' },
+            { id: '1978', label: '1978' },
+            { id: 'NOW', label: 'NOW' }
+        ];
+
+        const chartTimelinePoints = timelinePoints.filter(p => !p.id.startsWith('VIEW'));
+        const timelineDataForChart = chartTimelinePoints.map(p => {
+            const isSelected = p.id === year;
+            return {
+                value: p.id,
+                name: p.label,
+                symbolSize: isSelected ? 22 : 10,
+                symbolOffset: [0, 30], 
+                itemStyle: { color: isSelected ? colors.tju : colors.source, shadowBlur: isSelected ? 15 : 0, shadowColor: colors.tju },
+                label: { show: isSelected, position: 'bottom', formatter: p.label, color: isSelected?colors.tju:'#888' }
+            };
+        });
+
+        timelineChart.setOption({ 
+            series: [{ data: timelineDataForChart }],
+            xAxis: { data: chartTimelinePoints.map(p => p.id) } 
+        });
+
+        try {
+            const preBtn = document.getElementById('view-pre-btn');
+            const rebBtn = document.getElementById('view-rebuild-btn');
+            if (preBtn) preBtn.classList.toggle('active', currentFilterYear === 'VIEW_PRE');
+            if (rebBtn) rebBtn.classList.toggle('active', currentFilterYear === 'VIEW_REBUILD');
+        } catch (e) {}
+    }
+
+    
+import { COLORS, GEO_COORD_MAP, DEPT_ICONS, DEPTS } from './data/dept_config.js';
+import { RAW_DATA } from './data/dept_data.js';
+
+export function initChart() {
+    // Aliases
+    const colors = COLORS;
+    const geoCoordMap = GEO_COORD_MAP;
+    const rawData = RAW_DATA;
+
+    let currentFilterYear = null;
+    let chartInstances = {};
+    const SANKY_POS_KEY = 'tju_sankey_positions_d3_v1';
+    let sankeyNodePositions = {};
+    try { sankeyNodePositions = JSON.parse(localStorage.getItem(SANKY_POS_KEY)) || {}; } catch(e) { sankeyNodePositions = {}; }
+
+    // Clear containers
+    ['sankey-chart', 'map-chart', 'force-chart', 'timeline-chart'].forEach(id => {
+        document.getElementById(id).innerHTML = '';
+    });
+
+    // --- Data Processing Helpers ---
+    function matchYear(itemYear, filterYear) {
+        if (!filterYear || filterYear === 'NOW') return true;
+        if (filterYear === 'VIEW_PRE' || filterYear === 'VIEW_REBUILD') return false;
+        let iYear = parseInt(itemYear);
+        let fYear = parseInt(filterYear);
+        if (!isNaN(iYear) && !isNaN(fYear)) return iYear <= fYear;
+        return false;
+    }
+
+    function getSankeyData(yearFilter) {
+        // Same logic as before, but adapted for D3 if needed
+        if (yearFilter === 'VIEW_PRE' || yearFilter === 'VIEW_REBUILD') return { nodes: [], links: [] };
+        
+        const nodesMap = new Map();
+        const links = [];
+        const centerNode = "天津大学";
+
+        const processLink = (source, target, val, item, type) => {
+            if (!matchYear(item.year, yearFilter)) return;
+            
+            if (!nodesMap.has(source)) {
+                 nodesMap.set(source, { name: source, color: (source===centerNode)?colors.tju:colors.source });
+            }
+            if (!nodesMap.has(target)) {
+                 nodesMap.set(target, { name: target, color: (target===centerNode)?colors.tju:colors.target });
+            }
+
+            links.push({
+                source: source, 
+                target: target, 
+                value: val,
+                edgeData: {
+                    type: type,
+                    rawSource: item.source || "天津大学",
+                    rawTarget: item.target || item.evolution || "天津大学",
+                    dept: item.dept || item.label,
+                    desc: item.desc,
+                    intro: item.intro,
+                    year: item.year,
+                    image: item.image
+                }
+            });
+        };
+
+        rawData.inflows.forEach(i => processLink(i.source + "_src", centerNode, 5, i, 'INFLOW'));
+        rawData.outflows.forEach(i => processLink(centerNode, i.target, 3, i, 'OUTFLOW'));
+        rawData.branches.forEach(i => processLink(centerNode, i.target, 4, i, 'BRANCH'));
+
+        if (nodesMap.size > 0 || !yearFilter) {
+            if(!nodesMap.has(centerNode)) nodesMap.set(centerNode, { name: centerNode, color: colors.tju });
+        }
+
+        const nodes = Array.from(nodesMap.values());
+        // Map source/target strings to indices or objects for D3 Sankey
+        // D3 Sankey works better with index or object references. We'll use names for ID.
+        return { nodes, links };
+    }
+
+    function getForceData(yearFilter) {
+        const nodesMap = new Map();
+        nodesMap.set("天津大学", { id: "天津大学", name: "天津大学", category: 0, val: 50 });
+        const links = [];
+
+        const addNode = (name, cat) => {
+            if (!nodesMap.has(name)) {
+                nodesMap.set(name, { id: name, name: name, category: cat, val: 20 });
+            }
+        };
+
+        const process = (src, tgt, catSrc, catTgt) => {
+             addNode(src, catSrc);
+             addNode(tgt, catTgt);
+             links.push({ source: src, target: tgt });
+        };
+        
+        rawData.inflows.forEach(i => { if(matchYear(i.year, yearFilter)) process(i.source, "天津大学", 1, 0); });
+        rawData.outflows.forEach(i => { if(matchYear(i.year, yearFilter)) process("天津大学", i.target, 0, 2); });
+        rawData.branches.forEach(i => { if(matchYear(i.year, yearFilter)) process("天津大学", i.target, 0, 2); });
+        
+        return { nodes: Array.from(nodesMap.values()), links };
+    }
+
+    function getMapLines(yearFilter) {
+        const lines = [], scatter = [];
+        const addedScatter = new Set();
+        const center = geoCoordMap["天津大学"];
+
+        const process = (src, tgt, type) => {
+            const c1 = geoCoordMap[src] || [0,0];
+            const c2 = geoCoordMap[tgt] || [0,0];
+            if ((c1[0]===0 && c1[1]===0) || (c2[0]===0 && c2[1]===0)) return;
+
+            lines.push({ 
+                fromName: src, toName: tgt, 
+                coords: [c1, c2],
+                type: type
+            });
+
+            [src, tgt].forEach(n => {
+                if(!addedScatter.has(n)) {
+                    addedScatter.add(n);
+                    scatter.push({ name: n, value: geoCoordMap[n] });
+                }
+            });
+        };
+
+        rawData.inflows.forEach(i => { if(matchYear(i.year, yearFilter)) process(i.source, "天津大学", 'INFLOW'); });
+        rawData.outflows.forEach(i => { if(matchYear(i.year, yearFilter)) process("天津大学", i.target, 'OUTFLOW'); });
+        rawData.branches.forEach(i => { if(matchYear(i.year, yearFilter)) process("天津大学", i.target, 'BRANCH'); });
+
+        return { lines, scatter };
+    }
+
+    // --- Chart Implementations ---
+    
+    // 1. Sankey
+    function initSankey() {
+        if (typeof d3.sankey !== 'function') {
+            console.error("D3 Sankey plugin not loaded!");
+            document.getElementById('sankey-chart').innerHTML = '<div style="color:white;padding:20px;">Error: D3 Sankey plugin missing.</div>';
+            return;
+        }
+
+        const container = document.getElementById('sankey-chart');
+        const width = container.clientWidth || 800;
+        const height = container.clientHeight || 500;
+        const svg = d3.select(container).append('svg').attr('width', width).attr('height', height);
+        const g = svg.append("g");
+
+        const sankey = d3.sankey()
+            .nodeId(d => d.name)
+            .nodeWidth(15)
+            .nodePadding(15)
+            .extent([[1, 1], [width - 1, height - 6]]);
+
+        chartInstances.sankey = {
+            update: (year) => {
+                const data = getSankeyData(year);
+                if(data.nodes.length === 0) { 
+                    g.selectAll("*").remove(); 
+                    return; 
+                }
+
+                try {
+                    // D3 Sankey modifies data in-place. Clone to avoid issues on re-render.
+                    const graph = {
+                        nodes: data.nodes.map(d => ({...d})),
+                        links: data.links.map(d => ({...d}))
+                    };
+                    
+                    sankey(graph);
+
+                    // Links
+                    g.selectAll(".link")
+                        .data(graph.links)
+                        .join("path")
+                        .attr("class", "link")
+                        .attr("d", d3.sankeyLinkHorizontal())
+                        .attr("stroke-width", d => Math.max(1, d.width))
+                        .attr("stroke", d => (d.source.name === "天津大学" || d.source.name.includes('天津大学_src')) ? colors.target : colors.source)
+                        .attr("fill", "none")
+                        .attr("stroke-opacity", 0.15)
+                        .on("mouseover", function(event, d) {
+                            d3.select(this).attr("stroke-opacity", 0.6);
+                            handleSankeyHover(d, true);
+                        })
+                        .on("mouseout", function(event, d) {
+                            d3.select(this).attr("stroke-opacity", 0.15);
+                            handleSankeyHover(d, false);
+                        });
+
+                    // Nodes
+                    const node = g.selectAll(".node")
+                        .data(graph.nodes)
+                        .join("g")
+                        .attr("class", "node")
+                        .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+                    node.selectAll("rect").remove();
+                    node.append("rect")
+                        .attr("height", d => d.y1 - d.y0)
+                        .attr("width", d => d.x1 - d.x0)
+                        .attr("fill", d => d.color)
+                        .attr("stroke", "#000");
+
+                    node.selectAll("text").remove();
+                    node.append("text")
+                        .attr("x", d => d.x0 < width / 2 ? 6 + (d.x1 - d.x0) : -6)
+                        .attr("y", d => (d.y1 - d.y0) / 2)
+                        .attr("dy", "0.35em")
+                        .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                        .attr("fill", "#ccc")
+                        .attr("font-size", "10px")
+                        .text(d => d.name.replace("_src", "").substring(0, 15));
+
+                } catch (e) {
+                    console.error("Sankey Layout Error:", e);
+                    g.append("text").attr("x", 20).attr("y", 20).attr("fill", "red").text("Visual Error: Cyclic data or layout issue");
+                }
+            }
+        };
+        chartInstances.sankey.update(currentFilterYear);
+    }
+
+    // 2. Map (China)
+    function initMap() {
+        const container = document.getElementById('map-chart');
+        const width = container.clientWidth || 400;
+        const height = container.clientHeight || 300;
+        const svg = d3.select(container).append('svg').attr('width', width).attr('height', height);
+        
+        const projection = d3.geoMercator().center([105, 38]).scale(width * 0.8).translate([width/2, height/2]);
+        const path = d3.geoPath().projection(projection);
+
+        d3.json('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json').then(geojson => {
+             svg.append("g")
+                .selectAll("path")
+                .data(geojson.features)
+                .join("path")
+                .attr("d", path)
+                .attr("fill", "#232122")
+                .attr("stroke", "#4a4744");
+
+             const linesG = svg.append("g").attr("class", "map-lines");
+             const scatterG = svg.append("g").attr("class", "map-scatter");
+
+             chartInstances.map = {
+                 update: (year) => {
+                     const data = getMapLines(year);
+                     
+                     // Draw lines
+                     linesG.selectAll("path")
+                        .data(data.lines)
+                        .join("path")
+                        .attr("d", d => {
+                            const p1 = projection(d.coords[0]);
+                            const p2 = projection(d.coords[1]);
+                            if (!p1 || !p2) return "";
+                            const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+                            const dr = Math.sqrt(dx * dx + dy * dy) * 1.5; 
+                            return `M${p1[0]},${p1[1]}A${dr},${dr} 0 0,1 ${p2[0]},${p2[1]}`;
+                        })
+                        .attr("fill", "none")
+                        .attr("stroke", "#fff")
+                        .attr("stroke-width", 1)
+                        .attr("stroke-opacity", 0.4);
+
+                     // Draw Scatter
+                     scatterG.selectAll("circle")
+                        .data(data.scatter)
+                        .join("circle")
+                        .attr("cx", d => { const p = projection(d.value); return p ? p[0] : 0; })
+                        .attr("cy", d => { const p = projection(d.value); return p ? p[1] : 0; })
+                        .attr("r", 3)
+                        .attr("fill", "#fff");
+                 },
+                 highlight: (src, tgt, active) => {
+                     if(!active) {
+                         linesG.selectAll("path").attr("stroke-opacity", 0.4).attr("stroke-width", 1);
+                         scatterG.selectAll("circle").attr("fill", "#fff").attr("r", 3);
+                         return;
+                     }
+                     linesG.selectAll("path")
+                        .attr("stroke-opacity", d => (d.fromName === src && d.toName === tgt) ? 1 : 0.05)
+                        .attr("stroke-width", d => (d.fromName === src && d.toName === tgt) ? 3 : 1);
+                     
+                     scatterG.selectAll("circle")
+                         .attr("fill", d => (d.name === src || d.name === tgt) ? COLORS.source : "#fff")
+                         .attr("r", d => (d.name === src || d.name === tgt) ? 6 : 3);
+                 }
+             };
+             // Init load
+             chartInstances.map.update(currentFilterYear);
+        }).catch(err => {
+            console.error("Map Load Error", err);
+            svg.append("text").attr("x", 20).attr("y", height/2).attr("fill", "white").text("地图加载失败，请检查网络");
+        });
+    }
+
+    // 3. Force
+    function initForce() {
+        const container = document.getElementById('force-chart');
+        const width = container.clientWidth || 400;
+        const height = container.clientHeight || 300;
+        const svg = d3.select(container).append('svg').attr('width', width).attr('height', height);
+        
+        // Use a persistent simulation
+        let simulation = d3.forceSimulation()
+            .force("link", d3.forceLink().id(d => d.id).distance(60))
+            .force("charge", d3.forceManyBody().strength(-150))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+            
+        const linkG = svg.append("g").attr("stroke", "#999").attr("stroke-opacity", 0.6);
+        const nodeG = svg.append("g").attr("stroke", "#fff").attr("stroke-width", 1.5);
+
+        chartInstances.force = {
+            update: (year) => {
+                const data = getForceData(year); // New data instances
+                const nodes = data.nodes.map(d => ({...d}));
+                const links = data.links.map(d => ({...d}));
+                
+                // Keep simulation running
+                simulation.nodes(nodes);
+                simulation.force("link").links(links);
+                simulation.alpha(1).restart();
+
+                const node = nodeG.selectAll("circle")
+                    .data(nodes, d => d.id)
+                    .join("circle")
+                    .attr("r", 5)
+                    .attr("fill", d => d.category===0?colors.tju : (d.category===1?colors.source:colors.target))
+                    .call(d3.drag()
+                        .on("start", dragstarted)
+                        .on("drag", dragged)
+                        .on("end", dragended));
+                
+                node.selectAll("title").remove();
+                node.append("title").text(d => d.name);
+                
+                const link = linkG.selectAll("line")
+                    .data(links)
+                    .join("line")
+                    .attr("stroke-width", 1);
+
+                simulation.on("tick", () => {
+                    link
+                        .attr("x1", d => d.source.x)
+                        .attr("y1", d => d.source.y)
+                        .attr("x2", d => d.target.x)
+                        .attr("y2", d => d.target.y);
+
+                    node
+                        .attr("cx", d => d.x)
+                        .attr("cy", d => d.y);
+                });
+            },
+            highlight: (src, tgt, active) => {
+                 if(!active) {
+                     nodeG.selectAll("circle").attr("opacity", 1);
+                     linkG.selectAll("line").attr("opacity", 1);
+                     return;
+                 }
+                 nodeG.selectAll("circle").attr("opacity", d => (d.name===src||d.name===tgt)?1:0.1);
+                 linkG.selectAll("line").attr("opacity", d => (d.source.name === src && d.target.name === tgt) ? 1 : 0.1);
+            }
+        };
+        
+        function dragstarted(event) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            event.subject.fx = event.subject.x;
+            event.subject.fy = event.subject.y;
+        }
+
+        function dragged(event) {
+            event.subject.fx = event.x;
+            event.subject.fy = event.y;
+        }
+
+        function dragended(event) {
+            if (!event.active) simulation.alphaTarget(0);
+            event.subject.fx = null;
+            event.subject.fy = null;
+        }
+
+        chartInstances.force.update(currentFilterYear);
+    }
+
+
+    // 4. Timeline
+    function initTimeline() {
+        const container = document.getElementById('timeline-chart');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        const svg = d3.select(container).append('svg').attr('width', width).attr('height', height);
+
+        const timelinePoints = [
+            { id: '1952', label: '1952' },
+            { id: '1954', label: '1954' },
+            { id: '1955', label: '1955' },
+            { id: '1956', label: '1956' },
+            { id: '1960', label: '1960' },
+            { id: '1970', label: '1970' },
+            { id: '1978', label: '1978' },
+            { id: 'NOW', label: 'NOW' }
+        ];
+
+        const x = d3.scalePoint()
+            .domain(timelinePoints.map(d => d.id))
+            .range([50, width - 50]);
+
+        svg.append("line")
+            .attr("x1", 50)
+            .attr("x2", width - 50)
+            .attr("y1", height / 2)
+            .attr("y2", height / 2)
+            .attr("stroke", "#555");
+
+        const circles = svg.selectAll("circle")
+            .data(timelinePoints)
+            .join("circle")
+            .attr("cx", d => x(d.id))
+            .attr("cy", height / 2)
+            .attr("r", 6)
+            .attr("fill", d => colors.source)
+            .style("cursor", "pointer")
+            .on("click", (e, d) => updateDashboard(d.id));
+
+        const labels = svg.selectAll("text")
+            .data(timelinePoints)
+            .join("text")
+            .attr("x", d => x(d.id))
+            .attr("y", height / 2 + 25)
+            .attr("text-anchor", "middle")
+            .attr("fill", "#888")
+            .text(d => d.label);
+
+        chartInstances.timeline = {
+            update: (year) => {
+                circles.attr("fill", d => d.id === year ? colors.tju : colors.source)
+                    .attr("r", d => d.id === year ? 10 : 6);
+                labels.attr("fill", d => d.id === year ? colors.tju : "#888");
+            }
+        };
+        chartInstances.timeline.update(currentFilterYear);
+    }
+
+    // --- Interaction ---
+    function updateDashboard(year) {
+        currentFilterYear = year;
+        if(chartInstances.sankey) chartInstances.sankey.update(year);
+        if(chartInstances.map) chartInstances.map.update(year);
+        if(chartInstances.force) chartInstances.force.update(year);
+        if(chartInstances.timeline) chartInstances.timeline.update(year);
+        
+        // Handle view buttons style
+        try {
+            document.getElementById('view-pre-btn').classList.toggle('active', year === 'VIEW_PRE');
+            document.getElementById('view-rebuild-btn').classList.toggle('active', year === 'VIEW_REBUILD');
+        } catch(e) {}
+    }
+
+    function handleSankeyHover(d, active) {
+        // d is a link object from d3 sankey
+        // d.source and d.target are node objects or references
+        const srcName = d.source.name.replace("_src","");
+        const targetName = d.target.name;
+        
+        // Use helper in other charts to highlight
+        if(chartInstances.map) chartInstances.map.highlight(srcName, targetName, active);
+        if(chartInstances.force) chartInstances.force.highlight(srcName, targetName, active);
+
+        // Info terminal logic simplified
+        const infoTerminal = document.getElementById('info-terminal');
+        const info = d.edgeData;
+        if (active && info) {
+             let activeColor = info.type === 'INFLOW' ? colors.source : colors.target;
+             infoTerminal.innerHTML = `
+                <h3 style="color:${activeColor}; margin-bottom:15px">${info.rawSource} -> ${info.rawTarget}</h3>
+                <div>${info.dept} (${info.year})</div>
+                <div style="margin-top:10px; color:#aaa">${info.intro||''}</div>
+             `;
+        }
+    }
+
+    // Init
+    initSankey();
+    initMap();
+    initForce();
+    initTimeline();
+
+    // Resize
+    window.addEventListener('resize', () => {
+        ['sankey', 'map', 'force', 'timeline'].forEach(k => {
+             // In a real app we would resize SVG, here we just reload for simplicity
+             // A better way is to update widths/scales
+        });
+        location.reload(); // Simplest way to handle resize for D3 without complex update logic right now for this quick refactor
+    });
+    
+    // Play button logic
+    let playTimer = null;
+    const playBtn = document.getElementById('play-btn');
+    if(playBtn) {
+        playBtn.addEventListener('click', () => {
+            if(playTimer) {
+                clearInterval(playTimer); playTimer = null;
+                playBtn.innerText = '▶ PLAY';
+            } else {
+                playBtn.innerText = '⏸ PAUSE';
+                const timelinePoints = ['1952','1954','1955','1956','1960','1970','1978','NOW'];
+                let idx = 0;
+                playTimer = setInterval(() => {
+                    updateDashboard(timelinePoints[idx]);
+                    idx = (idx + 1) % timelinePoints.length;
+                }, 2000);
+            }
+        });
+    }
+
+    // External buttons
+    const viewPreBtn = document.getElementById('view-pre-btn');
+    if (viewPreBtn) viewPreBtn.addEventListener('click', () => updateDashboard('VIEW_PRE'));
+    
+    const viewRebuildBtn = document.getElementById('view-rebuild-btn');
+    if (viewRebuildBtn) viewRebuildBtn.addEventListener('click', () => updateDashboard('VIEW_REBUILD'));
+}
+}

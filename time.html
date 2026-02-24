@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>北洋-天大：星际无限引擎</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="css/time.css">
+</head>
+<body>
+    <div id="warp-overlay"></div>
+    <script>
+        document.body.classList.add('warp-enter');
+        window.addEventListener('load', () => {
+            const overlay = document.getElementById('warp-overlay');
+            if (!overlay) return;
+            setTimeout(() => {
+                overlay.style.transition = 'opacity 0.6s ease-out';
+                overlay.style.opacity = '0';
+                overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+                document.body.classList.remove('warp-enter');
+            }, 900);
+        });
+    </script>
+
+    <canvas id="bg-layer"></canvas>
+    <canvas id="fx-layer"></canvas>
+    <canvas id="main-layer"></canvas>
+
+    <div id="ui-layer">
+        <div class="hud-corner tl"></div>
+        <div class="hud-corner tr"></div>
+        <div class="hud-corner bl"></div>
+        <div class="hud-corner br"></div>
+        <div class="hud-text" style="top: 30px; left: 140px;">VELOCITY: WARP_3</div>
+        <div class="hud-text" id="year-display" style="top: 30px; right: 140px; font-size: 18px; color: #ffffff; text-shadow: 0 0 8px #00f3ff;">CURRENT YEAR: 1895</div>
+        <div class="hud-text" style="bottom: 30px; right: 140px;">COORDINATES: TJU_HISTORY_ARCHIVE</div>
+    </div>
+
+    <div id="tech-menu-container">
+        <div id="geo-overlay">
+            <div class="geo-grid"></div>
+            <div class="geo-header">
+                MIGRATION TRACKER // 历史轨迹 <span style="opacity:0.6; font-size:10px">SYNCED</span>
+                <div class="geo-close" onclick="menuAction('GEO_LOC')">X CLOSE</div>
+            </div>
+            
+            <div id="d3-map-container" class="map-svg-container"></div>
+        </div>
+
+        <div id="menu-trigger">
+            <div class="ring-dashed"></div>
+            <div class="ring-bracket"></div>
+        </div>
+        
+        <div class="sub-btn" onclick="menuAction('GEO_LOC')">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            <span>GEO</span>
+        </div>
+
+        <div class="sub-btn" onclick="menuAction('RELATIONS')">
+            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            <span>PEOPLE</span>
+        </div>
+
+        <div class="sub-btn" onclick="menuAction('DEPARTMENTS')">
+            <svg viewBox="0 0 24 24"><path d="M22 11V3h-7v3H9V3H2v8h7V8h2v10h4v3h7v-8h-7v3h-2V8h2v3z"/></svg>
+            <span>DEPT</span>
+        </div>
+
+        <div class="sub-btn" onclick="menuAction('RADAR_SCAN')">
+           <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+            <span>WEIJIN</span>
+        </div>
+        
+        <div class="sub-btn" onclick="menuAction('MAP_VIEW')">
+            <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+            <span>PEIYANG</span>
+        </div>
+
+        <div class="sub-btn" onclick="menuAction('SCI')">
+            <svg viewBox="0 0 24 24">
+                <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <ellipse cx="12" cy="12" rx="6" ry="3" transform="rotate(0 12 12)"/>
+                    <ellipse cx="12" cy="12" rx="6" ry="3" transform="rotate(60 12 12)"/>
+                    <ellipse cx="12" cy="12" rx="6" ry="3" transform="rotate(120 12 12)"/>
+                    <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
+                </g>
+            </svg>
+            <span>SCI</span>
+        </div>
+
+        <div class="sub-btn" onclick="menuAction('RADAR_SCAN')">
+           <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+            <span>WEIJIN</span>
+        </div>
+    </div>
+
+    <div id="cursor"></div>
+
+    <div id="holo-card">
+        <div class="scan-line"></div>
+        <div class="card-inner">
+            <div class="card-bg-num" id="c-year-bg">1895</div>
+            <span class="card-era" id="c-era">PEIYANG DYNASTY</span>
+            <h1 class="card-title" id="c-title">Event Name</h1>
+            <p class="card-desc" id="c-desc">Description...</p>
+            <img id="c-image" class="card-image" src="" alt="Event image" style="display:none;" />
+            <div id="c-map-container" class="map-preview-container">
+                <img src="" alt="God's Eye View" class="god-eye-map">
+                <div class="map-overlay"></div>
+            </div>
+            <button id="c-detail-btn" class="detail-btn">ENTER SIMULATION >></button>
+        </div>
+    </div>
+
+    <div id="timeline-container">
+        <div id="timeline-progress-bar"></div>
+        <div id="timeline-indicator">
+            <img id="timeline-icon" src="./Beiyangyuan_Campus/raw_picture/uniE015.png" alt="Progress">
+            <div id="timeline-event-label" class="timeline-event-label">Loading...</div>
+        </div>
+        <div class="timeline-year-marker" style="bottom: 0;">1895</div>
+        <div class="timeline-year-marker" style="top: 0;">2025</div>
+    </div>
+
+    <div id="warp-btn" onclick="warpJump()">WARP JUMP >></div>
+    <!-- Changed to div as button might have default browser styles or behaviors -->
+
+    <script type="module" src="js/time.js"></script>
+</body>
+</html>

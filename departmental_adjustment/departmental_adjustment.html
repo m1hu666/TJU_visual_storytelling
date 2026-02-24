@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天津大学 · 历史沿革可视化</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <link rel="stylesheet" href="css/departmental_adjustment.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:24px; height:24px; background:var(--color-tju); border-radius:2px; display:flex; align-items:center; justify-content:center;">
+                <div style="width:8px; height:8px; background:#1C1A1B;"></div>
+            </div>
+            <h1>TIANJIN UNIVERSITY <span style="font-size:14px; font-weight:400; opacity:0.6; color:var(--color-target);">| History Visualized</span></h1>
+        </div>
+        
+        <div class="header-controls">
+            <a href="../time.html" class="back-btn">
+                <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"></path><path d="M237.248 512l265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"></path></svg>
+                返回首页
+            </a>
+            <div class="sys-status" id="sys-status">ALL HISTORY</div>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div class="panel">
+            <div class="panel-title">Details</div>
+            <div id="info-terminal">
+                <h3>交互指南 <span class="subtitle">INTERACTION GUIDE</span></h3>
+                <div class="guide-list">
+                    <div class="guide-item">
+                        <div class="guide-icon">1</div>
+                        <div class="guide-text">点击底部 <b>时间轴节点</b><br/>可筛选特定年份数据</div>
+                    </div>
+                    <div class="guide-item">
+                        <div class="guide-icon">2</div>
+                        <div class="guide-text">悬停在 <b>流向连线</b> 上<br/>查看详细叙事与图片资料</div>
+                    </div>
+                    <div class="guide-item" style="border-style: solid; border-color: rgba(255,186,0,0.2);">
+                        <div class="guide-icon" style="background: var(--color-tju); color: black;">i</div>
+                        <div class="guide-text" style="align-self:center;">当前视图: <span id="current-view-label" style="color:var(--color-tju); font-weight:bold;">全历史全景</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-title">Department Flow</div>
+            <div id="sankey-chart"></div>
+            
+
+
+            <div id="merger-view">
+                <div class="mv-scene" id="mv-scene">
+                    <div class="mv-title-container">
+                        <div class="mv-main-title">中央人民政府教育部下令</div>
+                        <div class="mv-sub-title">1951年 · 院校合并与更名</div>
+                    </div>
+                    <div class="mv-node mv-src mv-src-1" style="left: 15%">
+                        <div class="mv-label">北洋大学</div>
+                        <div class="mv-sub">Beiyang Univ.</div>
+                    </div>
+                    <div class="mv-node mv-src mv-src-2" style="right: 15%">
+                        <div class="mv-label">河北工学院</div>
+                        <div class="mv-sub">Hebei Inst. Tech</div>
+                    </div>
+                    <div class="mv-node mv-target">
+                        <div class="mv-label" style="font-size:18px">天津大学</div>
+                        <div class="mv-sub">Tianjin University</div>
+                    </div>
+                    <div id="mv-dept-container" class="mv-dept-container"></div>
+                </div>
+            </div>
+            
+            <div id="rebuild-view" style="display: none; height: 100%; width: 100%; position: absolute; top: 0; left: 0; background: #1C1A1B; z-index: 10;">
+                 <div class="rb-scene" style="height: 100%; display: flex; flex-direction: column; align-items: center; padding-top: 40px;">
+                    <div class="rb-title-container" style="text-align: center; margin-bottom: 60px;">
+                        <div class="rb-main-title" style="font-size: 28px; color: #FFBA00; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255, 186, 0, 0.3);">抽调力量重新组建河北工学院</div>
+                        <div class="rb-sub-title" style="font-size: 16px; color: #ccc; margin-top: 10px;">1958年 · 薪火相传 · 工业复兴</div>
+                    </div>
+                    
+                    <div class="rb-content-box" style="display: flex; justify-content: center; align-items: center; width: 100%; position: relative;">
+                        <div class="rb-node tju-node" style="text-align: center; z-index: 2; position: relative;">
+                            <div class="node-circle" style="width: 120px; height: 120px; background: rgba(255, 186, 0, 0.1); border: 2px solid #FFBA00; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 15px; box-shadow: 0 0 20px rgba(255, 186, 0, 0.2);">
+                                <div style="font-size: 50px;">🏛️</div>
+                            </div>
+                            <div style="font-size: 24px; font-weight: bold; color: #FFBA00;">天津大学</div>
+                            <div style="color: #888; margin-top: 5px; font-size: 14px;">(原河北工学院合并部分)</div>
+                        </div>
+
+                        <div class="rb-flow-container" style="width: 300px; position: relative; height: 100px; display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 0 40px;">
+                             <div style="position: absolute; width: 100%; height: 2px; background: rgba(255, 255, 255, 0.1); top: 50%;"></div>
+                             
+                             <svg width="280" height="40" style="overflow: visible;">
+                                <defs>
+                                    <linearGradient id="flowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" style="stop-color:#FFBA00;stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:#FFE2C7;stop-opacity:1" />
+                                    </linearGradient>
+                                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#FFE2C7" />
+                                    </marker>
+                                </defs>
+                                <line x1="0" y1="20" x2="270" y2="20" stroke="url(#flowGrad)" stroke-width="4" marker-end="url(#arrowhead)" stroke-dasharray="10,5">
+                                    <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s" repeatCount="indefinite" />
+                                </line>
+                             </svg>
+
+                             <div style="position: absolute; top: -30px; background: rgba(100, 91, 80, 0.6); padding: 5px 15px; border-radius: 20px; border: 1px solid #FFBA00; color: #fff; font-size: 14px;">
+                                <span style="font-weight: bold; color: #FFBA00;">潘承孝院长</span> 率领
+                             </div>
+                             <div style="position: absolute; bottom: -25px; color: #aaa; font-size: 13px;">
+                                50余名骨干教师 / 800余名学生
+                             </div>
+                        </div>
+
+                        <div class="rb-node hbit-node" style="text-align: center; z-index: 2;">
+                            <div class="node-circle" style="width: 120px; height: 120px; background: rgba(255, 226, 199, 0.1); border: 2px solid #FFE2C7; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 15px; box-shadow: 0 0 20px rgba(255, 226, 199, 0.2);">
+                                <div style="font-size: 50px;">🏗️</div>
+                            </div>
+                            <div style="font-size: 24px; font-weight: bold; color: #FFE2C7;">河北工学院</div>
+                            <div style="background: #e74c3c; color: white; font-weight: bold; padding: 2px 10px; border-radius: 10px; display: inline-block; margin-top: 5px; font-size: 12px; box-shadow: 0 4px 10px rgba(231, 76, 60, 0.4);">🔥 1958 重建</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 60px; max-width: 700px; color: #888; line-height: 1.8; text-align: center; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px;">
+                        <p>1958年，为了支援河北省工业建设，天津大学将<b>化学工程系</b>、<b>机电系</b>等部分专业以及原河北工学院的合并资源剥离。</p>
+                        <p>由著名教育家<b>潘承孝</b>院长亲自带队，率领部分骨干师生回到发源地，在废墟上重建了<b>河北工学院</b>（今河北工业大学），实现了工科教育血脉的延续与再生。</p>
+                    </div>
+                 </div>
+            </div>
+        </div>
+        <div class="right-col">
+            <div class="panel">
+                <div class="panel-title">Map Distribution</div>
+                <div id="map-chart"></div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">Network Relation</div>
+                <div id="force-chart"></div>
+            </div>
+        </div>
+        
+        <div class="panel" style="grid-column: 1 / -1;">
+            <div class="panel-title">Timeline</div>
+        <div id="play-controls" style="position: absolute; bottom: 90px; left: 170px; z-index: 100; display: flex; gap: 10px; align-items: center;">
+            <button id="play-btn" style="background: var(--color-tju); border: none; border-radius: 4px; padding: 5px 15px; color: #000; font-weight: bold; cursor: pointer;">▶ PLAY</button>
+            <button id="view-pre-btn" class="interface-timeline-btn" title="院系调整前概况">
+                <span class="dot"></span>
+                <span class="label">院系调整前</span>
+            </button>
+            <button id="view-rebuild-btn" class="interface-timeline-btn" title="重新支援（1958）">
+                <span class="dot"></span>
+                <span class="label">重新支援</span>
+            </button>
+        </div>
+        <div id="timeline-chart"></div>
+    </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initChart } from './js/departmental_adjustment.js';
+    window.onload = function() {
+        initChart();
+    };
+</script>
+</body>
+</html>

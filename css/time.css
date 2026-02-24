@@ -1,0 +1,374 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap');
+
+:root {
+    --space: #000000;
+    --gold: #ffaa33;
+    --blue: #00f3ff;
+    --red: #ff0055;
+    --white: #ffffff;
+    --glass: rgba(0, 243, 255, 0.1);
+}
+
+body, html {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background-color: var(--space);
+    overflow: hidden;
+    font-family: 'Rajdhani', sans-serif;
+    cursor: none;
+    user-select: none;
+}
+
+canvas { position: fixed; top: 0; left: 0; }
+
+#bg-layer { z-index: 0; }
+#fx-layer { z-index: 1; mix-blend-mode: screen; pointer-events: none; }
+#main-layer { z-index: 2; }
+#ui-layer { z-index: 10; position: fixed; width: 100%; height: 100%; pointer-events: none; transition: opacity 0.8s ease; }
+
+/* 全息准星 */
+#cursor {
+    position: fixed; width: 40px; height: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 50%;
+    transform: translate(-50%, -50%); pointer-events: none; z-index: 100;
+    transition: width 0.1s, height 0.1s;
+    mix-blend-mode: exclusion;
+}
+#cursor::after {
+    content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 4px; height: 4px; background: #fff;
+}
+#cursor.active { width: 60px; height: 60px; border-color: var(--blue); border-width: 2px; }
+
+/* HUD 仪表盘 */
+.hud-corner { position: absolute; width: 100px; height: 100px; border: 1px solid rgba(255,255,255,0.1); }
+.tl { top: 20px; left: 20px; border-right: none; border-bottom: none; }
+.tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
+.bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
+.br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+
+.hud-text {
+    position: absolute; color: rgba(0, 243, 255, 0.6);
+    font-size: 10px; letter-spacing: 2px; font-weight: 700;
+}
+
+/* 详情卡片 */
+#holo-card {
+    position: fixed; top: 50%; right: 10%;
+    width: 450px;
+    transform: translateY(-50%) perspective(2000px) rotateY(-20deg) translateX(100px);
+    background: rgba(5, 8, 12, 0.9);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-left: 4px solid var(--blue);
+    backdrop-filter: blur(20px);
+    opacity: 0; pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    z-index: 50;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+}
+#holo-card.active {
+    opacity: 1; transform: translateY(-50%) perspective(2000px) rotateY(0deg) translateX(0); pointer-events: auto;
+}
+
+.card-inner { padding: 40px; position: relative; overflow: hidden; }
+.card-bg-num {
+    position: absolute; top: -20px; right: -20px; font-size: 120px; 
+    font-family: 'Orbitron'; color: rgba(255,255,255,0.03); font-weight: 900;
+}
+
+.card-title { font-size: 28px; color: #fff; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 0 20px currentColor; }
+.card-era { font-size: 12px; color: var(--blue); letter-spacing: 4px; margin-bottom: 20px; display: block; }
+.card-desc { font-size: 15px; line-height: 1.8; color: #ccc; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+.card-image {
+    display: block; width: 100%; max-height: 180px; object-fit: cover;
+    border-radius: 6px; margin-top: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    opacity: 0; transform: translateY(6px); transition: opacity 300ms ease, transform 300ms ease;
+}
+.card-image.visible { opacity: 1; transform: translateY(0); }
+.detail-btn {
+    display: none; margin-top: 20px; padding: 10px 25px;
+    background: rgba(0, 243, 255, 0.1); border: 1px solid var(--blue); color: var(--blue);
+    font-family: 'Orbitron'; font-size: 14px; letter-spacing: 2px; cursor: pointer;
+    transition: all 0.3s; text-transform: uppercase;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+
+/* 左侧时间轴 */
+#timeline-container {
+    position: fixed; left: 40px; top: 50%; transform: translateY(-50%);
+    height: 60vh; width: 4px; background: rgba(255, 255, 255, 0.1); z-index: 20; border-radius: 2px;
+}
+#timeline-progress-bar {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 0%;
+    background: var(--blue); box-shadow: 0 0 10px var(--blue); border-radius: 2px;
+}
+#timeline-indicator {
+    position: absolute; left: 50%; bottom: 0%; width: 0; height: 0; transform: translateX(-50%);
+}
+#timeline-icon {
+    position: absolute; width: 30px; height: 30px; transform: translate(-50%, 50%); filter: drop-shadow(0 0 5px var(--blue));
+}
+.timeline-event-label {
+    position: absolute; left: 25px; top: 0; transform: translateY(50%);
+    white-space: nowrap; color: var(--blue); font-size: 12px;
+    font-family: 'Rajdhani', sans-serif; font-weight: 700;
+    text-shadow: 0 0 5px var(--blue); pointer-events: none;
+    background: rgba(0,0,0,0.5); padding: 2px 5px; border-radius: 4px;
+}
+.timeline-year-marker {
+    position: absolute; left: 15px; font-size: 10px; color: rgba(255,255,255,0.5);
+    transform: translateY(50%); font-family: 'Orbitron';
+}
+
+/* 空间跳跃按钮 */
+#warp-btn {
+    position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
+    padding: 12px 40px; background: rgba(0, 243, 255, 0.1); border: 1px solid var(--blue);
+    color: var(--blue); font-family: 'Orbitron'; font-size: 16px; letter-spacing: 4px;
+    cursor: pointer; z-index: 100; transition: all 0.3s;
+    clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+    text-shadow: 0 0 5px var(--blue); box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+}
+#warp-btn:hover { background: var(--blue); color: #000; box-shadow: 0 0 30px var(--blue); text-shadow: none; }
+#warp-btn:active { transform: translateX(-50%) scale(0.95); }
+
+/* ========================================= */
+/* 可拖拽菜单 & 跟随式地图 */
+/* ========================================= */
+#tech-menu-container {
+    position: fixed; top: 50px; left: 50px;
+    z-index: 200; width: 0; height: 0;
+    transition: opacity 0.8s ease;
+}
+
+/* 主按钮 */
+#menu-trigger {
+    position: absolute; top: 0; left: 0; width: 110px; height: 110px;
+    cursor: grab; display: flex; justify-content: center; align-items: center;
+    z-index: 202;
+    background: radial-gradient(circle at center, rgba(0,243,255,0.2) 0%, rgba(0,0,0,0.8) 70%);
+    border-radius: 50%;
+    box-shadow: 0 0 15px var(--blue), inset 0 0 20px var(--blue);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#menu-trigger:active { cursor: grabbing; transform: scale(0.95); }
+#menu-trigger::after {
+    content: ''; position: absolute; width: 14px; height: 14px;
+    background: #fff; border-radius: 50%;
+    box-shadow: 0 0 10px #fff, 0 0 20px var(--blue);
+    transition: all 0.3s;
+}
+
+.ring-dashed {
+    position: absolute; width: 100%; height: 100%;
+    border: 2px dashed rgba(0, 243, 255, 0.6);
+    border-radius: 50%;
+    animation: spin 10s linear infinite;
+}
+.ring-bracket {
+    position: absolute; width: 120%; height: 120%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 2px solid var(--blue);
+    border-bottom: 2px solid var(--blue);
+    border-radius: 50%;
+    animation: spinReverse 15s linear infinite;
+}
+#tech-menu-container.active #menu-trigger {
+    box-shadow: 0 0 30px var(--red), inset 0 0 30px var(--red);
+}
+#tech-menu-container.active #menu-trigger::after {
+    background: var(--red); box-shadow: 0 0 15px var(--red); transform: scale(1.5);
+}
+#tech-menu-container.active .ring-dashed { border-color: var(--red); animation-duration: 2s; }
+#tech-menu-container.active .ring-bracket { border-color: var(--red); animation-duration: 3s; }
+
+/* 子按钮 */
+.sub-btn {
+    position: absolute; top: 10px; left: 10px;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: rgba(0, 10, 20, 0.9);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    color: var(--blue); font-family: 'Orbitron'; font-size: 8px; font-weight: bold;
+    opacity: 0; pointer-events: none;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 201; cursor: pointer;
+    box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.1);
+}
+.sub-btn::before {
+    content: ''; position: absolute; top: -4px; left: -4px; right: -4px; bottom: -4px;
+    border-radius: 50%; border: 1px dashed rgba(0, 243, 255, 0.4);
+    animation: subSpin 10s linear infinite; pointer-events: none;
+}
+.sub-btn svg { width: 22px; height: 22px; fill: var(--blue); margin-bottom: 2px; transition: 0.3s; }
+.sub-btn span { color: rgba(255,255,255,0.7); transform: scale(0.9); transition: 0.3s; }
+.sub-btn:hover {
+    background: rgba(0, 243, 255, 0.15); box-shadow: 0 0 15px var(--blue), inset 0 0 5px var(--blue);
+    border-color: rgba(255, 255, 255, 0.8);
+}
+.sub-btn:hover svg { fill: #fff; filter: drop-shadow(0 0 5px #fff); transform: scale(1.1); }
+.sub-btn:hover span { color: #fff; text-shadow: 0 0 5px var(--blue); }
+
+/* expanded positions for six sub-buttons (3..8 because container also has geo-overlay and menu-trigger) */
+#tech-menu-container.active .sub-btn:nth-child(3) { transform: translate(185px, -10px); opacity: 1; pointer-events: auto; transition-delay: 0.04s; }
+#tech-menu-container.active .sub-btn:nth-child(4) { transform: translate(173px, 60px); opacity: 1; pointer-events: auto; transition-delay: 0.08s; }
+#tech-menu-container.active .sub-btn:nth-child(5) { transform: translate(133px, 120px); opacity: 1; pointer-events: auto; transition-delay: 0.12s; }
+#tech-menu-container.active .sub-btn:nth-child(6) { transform: translate(-75px, 160px); opacity: 1; pointer-events: auto; transition-delay: 0.24s; }
+#tech-menu-container.active .sub-btn:nth-child(7) { transform: translate(2px, 180px); opacity: 1; pointer-events: auto; transition-delay: 0.20s; }
+#tech-menu-container.active .sub-btn:nth-child(8) { transform: translate(75px, 160px); opacity: 1; pointer-events: auto; transition-delay: 0.16s; }
+
+/* ---------------------------------------------------- */
+/* 便携式全息中国地图 (Pure Floating Edition - CLEAN FIX) */
+/* ---------------------------------------------------- */
+#geo-overlay {
+    position: absolute;
+    left: 240px;
+    top: 140px;
+    width: 500px; height: 400px;
+    z-index: 199;
+    opacity: 0; pointer-events: none;
+    transform: scale(0) rotateY(-30deg);
+    transform-origin: 0 0;
+    transition: opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    
+    /* 【绝对强制透明设置】 */
+    background: transparent !important; 
+    background-color: rgba(0,0,0,0) !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important; /* 针对 Safari/Webkit 浏览器的修复 */
+    
+    overflow: visible; 
+}
+
+#geo-overlay.active {
+    opacity: 1;
+    transform: scale(1) rotateY(0deg);
+    pointer-events: auto;
+}
+
+/* 确保 D3 生成的 SVG 和容器也是透明的 */
+#geo-overlay svg, 
+#d3-map-container,
+.map-svg-container {
+    background: transparent !important;
+    background-color: rgba(0,0,0,0) !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* 隐藏网格背景 */
+.geo-grid {
+    display: none !important;
+}
+
+.map-svg-container {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+}
+
+.province-path {
+    fill: none !important; /* 强制无填充，只留轮廓 */
+    fill-opacity: 0;
+    stroke: rgba(0, 243, 255, 0.3);
+    stroke-width: 1.2px; /* 轮廓加粗 (0.8px -> 1.2px) */
+    transition: all 0.4s ease;
+    vector-effect: non-scaling-stroke;
+}
+
+.province-path:hover {
+    stroke: rgba(0, 243, 255, 0.8);
+    fill: none !important; 
+    fill-opacity: 0;
+}
+
+.province-path.active {
+    fill: none !important;
+    fill-opacity: 0;
+    stroke: rgba(255, 170, 51, 1);
+    stroke-width: 2.5px; /* 选中时明显加粗 (1.5px -> 2.5px) */
+    /* 移除 drop-shadow 以防止发光产生的“背景感” */
+    filter: none;
+}
+
+.city-dot {
+    fill: #666; 
+    stroke: none;
+    transition: all 0.3s ease;
+}
+.city-dot.active {
+    fill: #fff;
+    filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 15px var(--gold));
+}
+.city-dot-pulse {
+    fill: transparent;
+    stroke: var(--gold);
+    stroke-width: 1;
+    opacity: 0;
+}
+.city-dot.active + .city-dot-pulse {
+    animation: pulseMap 1.5s infinite;
+}
+
+@keyframes pulseMap {
+    0% { transform: scale(1); opacity: 1; stroke-width: 2px;}
+    100% { transform: scale(4); opacity: 0; stroke-width: 0px;}
+}
+
+.city-label-text {
+    fill: rgba(0, 243, 255, 0.7);
+    font-family: 'Orbitron';
+    font-size: 10px;
+    opacity: 0;
+    text-anchor: middle;
+    transform: translateY(-8px);
+    transition: opacity 0.3s;
+    text-shadow: 0 0 3px #000;
+}
+.city-dot.active ~ .city-label-text { opacity: 1; fill: var(--gold); }
+
+.geo-header {
+    position: absolute; top: 10px; left: 15px; right: 15px;
+    height: 30px;
+    color: var(--blue); font-family: 'Orbitron'; font-size: 14px;
+    
+    /* 保留底部线条，但强制背景透明 */
+    border-bottom: 2px solid var(--blue); 
+    background: transparent !important;
+    background-color: rgba(0,0,0,0) !important;
+    
+    cursor: move;
+    z-index: 210;
+    text-shadow: 0 0 5px #000;
+}
+
+.geo-close {
+    position: absolute; top: 0px; right: 0px;
+    color: rgba(255,255,255,0.8); cursor: pointer; font-family: 'Orbitron'; font-size: 10px;
+    padding: 5px;
+    text-shadow: 0 0 5px #000;
+}
+.geo-close:hover { color: var(--red); }
+
+/* ---------------------------------------------------- */
+
+@keyframes spin { 0% {transform: rotate(0deg);} 100% {transform: rotate(360deg);} }
+@keyframes spinReverse { 0% {transform: rotate(360deg);} 100% {transform: rotate(0deg);} }
+@keyframes subSpin { from {transform: rotate(0deg);} to {transform: rotate(360deg);} }
+
+#warp-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; z-index: 99999; pointer-events: none; opacity: 1;
+}
+body.warp-enter { animation: warpIn 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+@keyframes warpIn {
+    0% { filter: brightness(0.05) blur(24px) contrast(160%); transform: scale(1.5); opacity: 0; }
+    60% { filter: brightness(0.02) blur(30px) contrast(200%); transform: scale(1.1); opacity: 1; }
+    100% { filter: none; transform: none; opacity: 1; }
+}
+body.warp-exit { animation: warpOut 1.5s ease-in-out forwards; pointer-events: none; }
+@keyframes warpOut {
+    0% { filter: brightness(1) blur(0); opacity: 1; transform: scale(1); }
+    100% { filter: brightness(0) blur(10px); opacity: 0; transform: scale(1.05); }
+}
